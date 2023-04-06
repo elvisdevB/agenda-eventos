@@ -20,6 +20,8 @@ class EventoDetail extends StatefulWidget {
 }
 
 class EventoDetailState extends State<EventoDetail> {
+  BaseDatosHelper baseDatosHelper = BaseDatosHelper();
+
   Evento evento;
   TextEditingController nombreController = TextEditingController();
   TextEditingController fechaController = TextEditingController();
@@ -28,12 +30,18 @@ class EventoDetailState extends State<EventoDetail> {
   //Hablar
   FlutterTts flutterTts = FlutterTts();
 
+  //Speech
+  bool _isListening = false;
+  SpeechToText _speechToText;
+  String _text = "";
+
   EventoDetailState(this.evento);
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
+    _speechToText = SpeechToText();
     hablar("Por favor seleccione, la fecha y la hora");
   }
 
@@ -129,42 +137,94 @@ class EventoDetailState extends State<EventoDetail> {
                           borderRadius: BorderRadius.circular(5.0))),
                 ),
               ),
-
-              //Buttons
-              Padding(
-                padding: EdgeInsets.only(top: 15.0, bottom: 15.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        child: Text('Guardar'),
-                        onPressed: () {
-                          hablar("Hola mundo");
-                        },
-                      ),
-                    ),
-                    Container(
-                      width: 5.0,
-                    ),
-                    Expanded(
-                      child: ElevatedButton(
-                        child: Text('Cancelar'),
-                        onPressed: () {
-                          moveToLastScreen();
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
+        floatingActionButton: AvatarGlow(
+            endRadius: 80,
+            animate: _isListening,
+            glowColor: Colors.teal,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text("Diga guardar, o cancelar respectivamente"),
+                SizedBox(height: 20),
+                FloatingActionButton(
+                  onPressed: () {
+                    _listen();
+                  },
+                  child: Icon(
+                    _isListening ? Icons.circle : Icons.mic,
+                    size: 35,
+                  ),
+                ),
+              ],
+            )),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
   }
 
   void moveToLastScreen() {
     Navigator.pop(context, true);
+  }
+
+  void _guardar() async {
+    moveToLastScreen();
+
+    evento.setFecha = fechaController.text;
+    evento.setHora = horaController.text;
+
+    int resultado;
+
+    if (evento.getId != null) {
+      resultado = await baseDatosHelper.editarEvento(evento);
+    } else {
+      resultado = await baseDatosHelper.insertarEvento(evento);
+    }
+
+    if (resultado != 0) {
+      _showAlertDialog('Estado', 'Evento Guardado con Exito');
+    } else {
+      _showAlertDialog('Estado', 'Problemas al guardar el Evento');
+    }
+  }
+
+  void _showAlertDialog(String title, String message) {
+    AlertDialog alertDialog = AlertDialog(
+      title: Text(title),
+      content: Text(message),
+    );
+    showDialog(context: context, builder: (_) => alertDialog);
+  }
+
+  void _listen() async {
+    if (!_isListening) {
+      bool available = await _speechToText.initialize(
+        onStatus: (val) => print('onStatus: $val'),
+        onError: (val) => print('onError: $val'),
+      );
+      if (available) {
+        setState(() => _isListening = true);
+        _speechToText.listen(onResult: (val) {
+          setState(() {
+            _text = val.recognizedWords;
+          });
+        });
+      }
+    } else {
+      setState(() {
+        _isListening = false;
+        _speechToText.stop();
+      });
+    }
+
+    if (_isListening == false) {
+      if (_text == "guardar") {
+        _guardar();
+      } else if (_text == "cancelar") {
+        moveToLastScreen();
+      }
+    }
   }
 }

@@ -2,7 +2,6 @@ import 'package:avatar_glow/avatar_glow.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:navegar_voz/screens/hablar.dart';
-import 'package:navegar_voz/screens/speech.dart';
 import 'package:navegar_voz/util/basedatos_helper.dart';
 import 'package:navegar_voz/model/evento.dart';
 import 'package:sqflite/sqflite.dart';
@@ -22,13 +21,10 @@ class EventoListaState extends State<EventoLista> {
   List<Evento> eventoLista;
   Evento evento;
   int count = 0;
-  bool isListening = false;
-  String textSample = 'Click button to start recording';
 
   @override
   void initState() {
     super.initState();
-    hablar("Pulse el boton de la parte posterior para agregar un evento");
   }
 
   @override
@@ -42,26 +38,6 @@ class EventoListaState extends State<EventoLista> {
         title: Text('Eventos'),
       ),
       body: getNoteListView(),
-      floatingActionButton: AvatarGlow(
-        endRadius: 80,
-        animate: isListening,
-        glowColor: Colors.teal,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text("Pruebe decir 'crear evento'"),
-            SizedBox(height: 20),
-            FloatingActionButton(
-              onPressed: () => {toggleRecording(context)},
-              child: Icon(
-                isListening ? Icons.circle : Icons.mic,
-                size: 35,
-              ),
-            ),
-          ],
-        )
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -74,38 +50,22 @@ class EventoListaState extends State<EventoLista> {
           elevation: 2.0,
           child: ListTile(
             title: Text(this.eventoLista[position].getNombre),
-            subtitle: Text(this.eventoLista[position].getFecha +
+            subtitle: Text(this.eventoLista[position].getFecha +" "+
                 this.eventoLista[position].getHora),
             trailing: GestureDetector(
               child: Icon(
                 Icons.delete,
                 color: Colors.red,
               ),
-              onTap: () {},
+              onTap: () {
+                _delete(context, eventoLista[position]);
+              },
             ),
           ),
         );
       },
     );
   }
-
-  Future toggleRecording(BuildContext context) => Speech.toggleRecording(
-      onResult: (String text) => setState(() {
-            textSample = text;
-          }),
-      onListening: (bool isListening) {
-        setState(() {
-          this.isListening = isListening;
-        });
-        if (!isListening) {
-          if (textSample == "crear evento") {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => EventoDetail(Evento("", "", ""))));
-          }
-        }
-      });
 
   void navigateToDetail(Evento evento) async {
     bool resultado =
@@ -130,5 +90,18 @@ class EventoListaState extends State<EventoLista> {
         });
       });
     });
+  }
+
+  void _showSnackBar(BuildContext context, String message) {
+    final snackBar = SnackBar(content: Text(message));
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
+  void _delete(BuildContext context, Evento evento) async {
+    int result = await baseDatosHelper.eliminarEvento(evento.getId);
+    if (result != 0) {
+      _showSnackBar(context, 'Evento eliminado con exito');
+      updateListView();
+    }
   }
 }

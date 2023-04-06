@@ -6,6 +6,8 @@ import 'package:navegar_voz/screens/hablar.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:highlight_text/highlight_text.dart';
 
+import 'evento_listar.dart';
+
 class SpeechScreen extends StatefulWidget {
   @override
   State<SpeechScreen> createState() => _SpeechScreenState();
@@ -40,19 +42,27 @@ class _SpeechScreenState extends State<SpeechScreen> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: AvatarGlow(
-        animate: _isListening,
-        glowColor: Theme.of(context).primaryColor,
-        endRadius: 75,
-        duration: const Duration(milliseconds: 2000),
-        repeatPauseDuration: const Duration(microseconds: 100),
-        repeat: true,
-        child: FloatingActionButton(
-          onPressed: () {
-            _listen(context);
-          },
-          child: Icon(_isListening ? Icons.circle : Icons.mic),
-        ),
-      ),
+          animate: _isListening,
+          glowColor: Theme.of(context).primaryColor,
+          endRadius: 75,
+          duration: const Duration(milliseconds: 2000),
+          repeatPauseDuration: const Duration(microseconds: 100),
+          repeat: true,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text("Diga ver eventos, para ver la lista de eventos"),
+              SizedBox(
+                height: 20,
+              ),
+              FloatingActionButton(
+                onPressed: () {
+                  _listen(context);
+                },
+                child: Icon(_isListening ? Icons.circle : Icons.mic),
+              ),
+            ],
+          )),
       body: SingleChildScrollView(
         reverse: true,
         child: Container(
@@ -93,10 +103,15 @@ class _SpeechScreenState extends State<SpeechScreen> {
     }
 
     if (_isListening == false) {
-      Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) => EventoDetail(Evento(_text, "", ""))));
+      if (_text == "ver eventos") {
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => EventoLista()));
+      } else {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => EventoDetail(Evento(_text, "", ""))));
+      }
     }
   }
 }
